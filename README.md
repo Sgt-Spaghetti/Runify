@@ -48,11 +48,11 @@ To load custom dictionaries:
 To load .csv files created externally:
 Please make sure the .csv file is created from only 2 columns, the leftmost being the input character/word and the rightmost being the output character/word.
 The file should look something like this:
-`
+
 input1,output1
 input2,output2
 input3,output3
-`
+
 * Select the "Options" drop-down, and select "Load from custom dictionary" followed by "Load from csv" and the appropriate option for the .csv file.
 * Navigate and select the correct .csv file desired from the file browser.
 * Done, the .csv file should now be loaded as a custom dictionary.
