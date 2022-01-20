@@ -16,11 +16,8 @@ def start():
     loop = True
     global conversion_type
 
-    if len(sys.argv) > 1 and sys.argv[1] == "g":
-        global graphical
-        graphical = True
-        gui()
-    else:
+    if len(sys.argv) > 1 and sys.argv[1] == "c":
+
         IntroStuff.startup()
 
         while active == True:
@@ -38,9 +35,12 @@ def start():
                     loop = False
                 else:
                     print("Whoops, didn't get that")
-
             
             conversion(input_file_path)
+    else:
+        global graphical
+        graphical = True
+        gui()
 
 def word_conversion(inputstring):
 
@@ -240,7 +240,9 @@ def gui():
         frames = [box_container,window,input_files_container]
         boxes = [gui.output_window,gui.input_window,gui.input_text_field]
         checkboxes = [letters_checkbox,words_checkbox,window_checkbox]
-        menu = [menubar,filemenu,thememenu,load_dictionary_bar]
+        menu = [menubar,filemenu,thememenu,load_dictionary_bar,csv_bar]
+
+        gui.active_theme = theme[8]
         
         for widget in configurable:
             if widget in frames:
@@ -266,6 +268,14 @@ def gui():
                     
             else:
                 widget.configure(bg = theme[0], fg=theme[1])
+
+    def save_theme(theme):
+        with open("config.txt", "w") as file:
+            if theme == "light":
+                file.write("Theme: light")
+
+            elif theme == "dark":
+                file.write("Theme: dark")
 
     def browse_input_btn():
         filepath = str(askopenfilename(
@@ -293,7 +303,7 @@ def gui():
                 if entries[i][0] != None and entries[i][1] != None:
                     dic[entries[i][0].get()] = entries[i][1].get()
                     
-            data = json.dumps(dic)
+            data = json.dumps(dic, indent=4)
 
             filepath = str(asksaveasfilename(
                 filetypes = [("Text Files","*.txt"),("All Files","*.*")]))
@@ -342,26 +352,55 @@ def gui():
 
 
     def load_custom_dictionary(_type):
+
         global custom_word
         global custom_letter
 
-        file_path = askopenfilename(
-            filetypes=[("Text","*.txt"),("All Files","*.*")]
-        )
+        if _type == "word" or _type == "letter":
+            file_path = askopenfilename(
+                filetypes=[("Text Files","*.txt"),("All Files","*.*")]
+            )
+        if _type == "wcsv" or _type == "lcsv":
+            file_path = askopenfilename(
+                filetypes=[("CSV files","*.csv"),("All Files","*.*")]
+            )
+            
         try:
             with open(file_path,"r") as input_file:
-                data = input_file.read()
-                data = json.loads(data)
-                if _type == "word":
-                    custom_word = data
-                elif _type == "letter":
-                    custom_letter = data
+
+                if _type == "word" or _type == "letter":
+                    data = input_file.read()
+                    data = json.loads(data)
+                    if _type == "word":
+                        custom_word = data
+                    else:
+                        custom_letter = data
+                if _type == "wcsv" or _type == "lcsv":
+                    
+                    dic = {}
+                    data = input_file.readlines()
+                    
+                    for line in data:
+                        line = re.split(",|\n",line,2)
+                        del line[2]
+                        dic[line[0]] = line[1]
+
+                    if _type == "wcsv":
+                        custom_word = dic
+                    else:
+                        custom_letter = dic
+
         except TypeError:
             pass
         except FileNotFoundError:
             pass
         except ValueError:
             tk.messagebox.showinfo("Invalid file", "Could not parse file data")
+
+    def clear_custom_dictionaries():
+        global custom_word, custom_letter
+        custom_word = {}
+        custom_letter = {}
 
     # Load images
     photo1dark = tk.PhotoImage(file= "FileIcon.png")
@@ -384,10 +423,23 @@ def gui():
     light_theme_box = "white"
     dark_theme_box = "#606060"
 
-    dark_theme = (dark_theme_background, dark_theme_text,dark_theme_box,photo1light, photo2dark,"#142427","#142427","black")
-    light_theme = (light_theme_background, light_theme_text,light_theme_box,photo1dark, photo2light,"white","light grey","light grey")
-    
-    theme = (light_theme)
+    dark_theme = (dark_theme_background, dark_theme_text,dark_theme_box,photo1light,
+                  photo2dark,"#142427","#142427","black","dark")
+    light_theme = (light_theme_background, light_theme_text,light_theme_box,photo1dark,
+                   photo2light,"white","light grey","light grey","light")
+    gui.active_theme = "light"
+
+    try:
+        with open("config.txt","r") as file:
+            data = file.read()
+            if data == "Theme: light":
+                theme = light_theme
+            elif data == "Theme: dark":
+                theme = dark_theme
+            else:
+                raise TypeError
+    except:
+        theme = light_theme
 
     # set main window config
     window.title("Runify - Graphical mode")
@@ -398,19 +450,27 @@ def gui():
     window["background"] = theme[0]
 
     # Create the dropdown menubar
-    menubar = tk.Menu(master=window, borderwidth=1, relief="flat", bg=theme[0])
-    filemenu = tk.Menu(master=menubar, tearoff=0,relief="flat",bg=theme[2])
-    thememenu = tk.Menu(master=menubar, tearoff = 0, relief="flat",bg=theme[2])
-    load_dictionary_bar = tk.Menu(master=filemenu, tearoff=0,bg=theme[2])
+    menubar = tk.Menu(master=window, borderwidth=1, relief="flat", bg=theme[0],fg=theme[1])
+    filemenu = tk.Menu(master=menubar, tearoff=0,relief="flat",bg=theme[2],fg=theme[1])
+    thememenu = tk.Menu(master=menubar, tearoff = 0, relief="flat",bg=theme[2],fg=theme[1])
+    load_dictionary_bar = tk.Menu(master=filemenu, tearoff=0,bg=theme[2],relief="flat",fg=theme[1])
+    csv_bar = tk.Menu(master=load_dictionary_bar, tearoff=0,bg=theme[2], relief="flat",fg=theme[1])
+
     
     filemenu.add_command(label="Create Custom Dictionary", command=create_custom_dictionary)
     filemenu.add_cascade(label="Load Custom Dictionary", menu=load_dictionary_bar)
+    filemenu.add_command(label="Clear Loaded Dictionaries", command = clear_custom_dictionaries)
 
     load_dictionary_bar.add_command(label="Word Dictionary", command=lambda:load_custom_dictionary("word"))
     load_dictionary_bar.add_command(label="Letter Dictionary", command=lambda:load_custom_dictionary("letter"))
+    load_dictionary_bar.add_cascade(label = "Load from CSV", menu = csv_bar)
+
+    csv_bar.add_command(label = "Use as Word Dictionary", command = lambda: load_custom_dictionary("wcsv"))
+    csv_bar.add_command(label = "Use as Letter Dictionary", command = lambda: load_custom_dictionary("lcsv"))
 
     thememenu.add_command(label = "Light Theme", command= lambda: change_theme(light_theme,themed_widgets))
     thememenu.add_command(label = "Dark Theme", command = lambda: change_theme(dark_theme,themed_widgets))
+    thememenu.add_command(label = "Set Default", command = lambda: save_theme(gui.active_theme))
 
     menubar.add_cascade(label = "Options", menu = filemenu)
     menubar.add_cascade(label = "Theme", menu = thememenu)
@@ -435,9 +495,9 @@ def gui():
     input_path_label = tk.Label(master=input_files_container, text="Path to input file:",background=theme[0], fg=theme[1])
     gui.input_text_field = tk.Entry(master=input_files_container,borderwidth=1,highlightthickness=0)
     
-    input_browse_btn = tk.Button(master=input_files_container, image=filephoto,bg=theme[0], fg=theme[1],borderwidth=0,
+    input_browse_btn = tk.Button(master=input_files_container, image=theme[3],bg=theme[0], fg=theme[1],borderwidth=0,
                                      highlightthickness=0,command=browse_input_btn, width=70, height=40,
-                                     activebackground="white")
+                                     activebackground = theme[2])
 
     letters_checkbox = tk.Checkbutton(master=input_files_container, variable=checkbox_letters, text="Transliterate letters",command=check_button_states,
                                       bg= theme[0],borderwidth=0,highlightthickness=0, fg=theme[1])
@@ -475,10 +535,6 @@ def gui():
     window_checkbox.grid(row=4, column=0)
     window_lbl_output.grid(row=4, column=2)
 
-
-    #gui.input_window.grid(row=1,column=0,padx=10,pady=10)
-    # Commented as changed with the checkbox!
-
     gui.output_window.grid(row=0,column=0,columnspan=2,sticky="nsew", padx=2,pady=2)
 
     # Grid the frames and the big text entry boxes
@@ -486,8 +542,8 @@ def gui():
     box_container.grid(row=1, column=0,columnspan=2,sticky="nsew")
 
     themed_widgets = [input_path_label,input_browse_btn,box_container,window,input_files_container,menubar,gui.input_text_field,load_dictionary_bar,
-                      letters_checkbox,words_checkbox,window_checkbox,window_lbl_output,gui.output_window,gui.input_window,filemenu,thememenu]
-#window,input_files_container,box_container,
+                      letters_checkbox,words_checkbox,window_checkbox,window_lbl_output,gui.output_window,gui.input_window,filemenu,thememenu,csv_bar]
+
     window.config(menu=menubar)
 
     
