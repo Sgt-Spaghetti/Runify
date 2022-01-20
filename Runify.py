@@ -510,8 +510,8 @@ def gui():
 
 
     # The two big text windows for manual text entry and preview
-    gui.input_window = tk.Text(master=box_container, state="disabled", bg=theme[2],borderwidth=0,highlightthickness=0)
-    gui.output_window = tk.Text(master=box_container, state="disabled",borderwidth=0,highlightthickness=0)
+    gui.input_window = tk.Text(master=box_container, state="disabled", bg=theme[2],fg=theme[1],borderwidth=0,highlightthickness=0)
+    gui.output_window = tk.Text(master=box_container, state="disabled",borderwidth=0,highlightthickness=0,bg=theme[2], fg=theme[1])
 
 
     # Widgets associated to the big text windows
